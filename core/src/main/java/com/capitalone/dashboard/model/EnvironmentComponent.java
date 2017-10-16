@@ -22,8 +22,15 @@ public class EnvironmentComponent extends BaseModel {
     private boolean deployed;
     private long deployTime;
     private long asOfDate;
-
-
+    private Build buildInfo;
+    
+    public Build getBuildInfo() {
+		return buildInfo;
+	}
+    
+    public void setBuildInfo(Build buildInfo) {
+		this.buildInfo = buildInfo;
+	}
 	
     public ObjectId getCollectorItemId() {
         return collectorItemId;

@@ -29,9 +29,11 @@ import org.xml.sax.SAXException;
 
 import com.capitalone.dashboard.misc.HygieiaException;
 import com.capitalone.dashboard.model.DataResponse;
+import com.capitalone.dashboard.model.DeployComponentResponse;
 import com.capitalone.dashboard.model.deploy.Environment;
 import com.capitalone.dashboard.request.DeployDataCreateRequest;
 import com.capitalone.dashboard.service.DeployService;
+import com.capitalone.dashboard.service.DeployServiceImpl;
 
 @RestController
 public class DeployController {
@@ -47,6 +49,11 @@ public class DeployController {
     @RequestMapping(value = "/deploy/status/{componentId}", method = GET, produces = APPLICATION_JSON_VALUE)
     public DataResponse<List<Environment>> deployStatus(@PathVariable ObjectId componentId) {
         return deployService.getDeployStatus(componentId);
+    }
+    
+    @RequestMapping(value = "/deploy/status/allcomps", method = GET, produces = APPLICATION_JSON_VALUE)
+    public DataResponse<List<DeployComponentResponse>> deployStatusAllComps() {
+        return ((DeployServiceImpl)deployService).searchAllComponents();
     }
 
     @RequestMapping(value = "/deploy/status/application/{applicationName}", method = GET, produces = APPLICATION_JSON_VALUE)

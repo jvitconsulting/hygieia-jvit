@@ -8,8 +8,11 @@ import com.capitalone.dashboard.repository.ComponentRepository;
 import com.capitalone.dashboard.request.BuildDataCreateRequest;
 import com.capitalone.dashboard.request.BuildSearchRequest;
 import com.capitalone.dashboard.request.CollectorRequest;
+import com.google.common.collect.Iterables;
 import com.mysema.query.BooleanBuilder;
+
 import org.apache.commons.lang.StringUtils;
+import org.bson.types.ObjectId;
 import org.joda.time.LocalDate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -84,7 +87,79 @@ public class BuildServiceImpl implements BuildService {
         return new DataResponse<>(result, collector.getLastExecuted());
     }
 
-    @Override
+    public DataResponse<Iterable<BuildComponentResponse>> searchAllComponents(BuildSearchRequest request) {
+		if (request == null) {
+	        return emptyResponse();
+	    }
+		QBuild build = new QBuild("build");
+	    BooleanBuilder builder = new BooleanBuilder();
+	    
+	    Iterable<Component> findAll = componentRepository.findAll();
+	    for (Component comp : findAll) {
+	    	List<CollectorItem> items = comp.getCollectorItems().get(CollectorType.Build);
+	        if (items != null && !items.isEmpty()) {
+	        	CollectorItem item = Iterables.getFirst(items, null);
+	        	builder.or(build.collectorItemId.eq(item.getId()));
+	        }
+		}
+	    if (request.getNumberOfDays() != null) {
+            long endTimeTarget = new LocalDate().minusDays(request.getNumberOfDays()).toDate().getTime();
+            builder.and(build.endTime.goe(endTimeTarget));
+        }
+	    Iterable<Build> allBuilds = buildRepository.findAll(builder.getValue());
+	    Map<String,ArrayList<BuildResponse>> compBuildmap = new HashMap<String,ArrayList<BuildResponse>>();
+	    
+        for (Build bld : allBuilds) {
+			
+        	String compName = getCompName(bld.getCollectorItemId());
+        	
+        	ArrayList<BuildResponse> buildResArray = compBuildmap.get(compName);
+        	if(buildResArray==null){
+				buildResArray = new ArrayList<BuildResponse>();
+        		compBuildmap.put(compName,buildResArray);
+        	}
+        	
+			BuildResponse buildRes = new BuildResponse();
+			buildRes.setBuildStatus(bld.getBuildStatus().name());
+			buildRes.setBuildUrl(bld.getBuildUrl());
+			buildRes.setNumber(bld.getNumber());
+			buildRes.setDuration(bld.getDuration());
+			buildRes.setStartedBy(bld.getStartedBy());
+			buildRes.setComponentName(compName);
+			buildResArray.add(buildRes);
+			
+		}
+        
+        ArrayList<BuildComponentResponse> buildCompResArray = new ArrayList<BuildComponentResponse>();
+        Set<String> keySet = compBuildmap.keySet();
+        
+        for (String compName : keySet) {
+        	BuildComponentResponse buildCompRes = new BuildComponentResponse();
+			buildCompRes.setCompName(compName);
+			ArrayList<BuildResponse> resBuilds = compBuildmap.get(compName);
+			buildCompRes.setBuildResArray(resBuilds);
+			buildCompResArray.add(buildCompRes);
+		}
+	    
+	    return new DataResponse<>(buildCompResArray, 10);
+	    
+	}
+    
+    private String getCompName(ObjectId collectorItemId) {
+        Iterable<Component> findAll = componentRepository.findAll();
+        for (Component comp : findAll) {
+        	List<CollectorItem> items = comp.getCollectorItems().get(CollectorType.Build);
+            if (items != null && !items.isEmpty()) {
+            	CollectorItem item = Iterables.getFirst(items, null);
+            	if(item.getId().equals(collectorItemId)){
+            		return comp.getName();
+            	}
+            }
+		}
+		return "";
+	}
+
+	@Override
     public String create(BuildDataCreateRequest request) throws HygieiaException {
         /**
          * Step 1: create Collector if not there
@@ -165,4 +240,9 @@ public class BuildServiceImpl implements BuildService {
         build.getCodeRepos().addAll(rbs);
         return buildRepository.save(build); // Save = Update (if ID present) or Insert (if ID not there)
     }
+
+	private DataResponse<Iterable<BuildComponentResponse>> emptyResponse() {
+    	Iterable<BuildComponentResponse> results = new ArrayList<>();
+        return new DataResponse<>(results, new Date().getTime());
+	}
 }

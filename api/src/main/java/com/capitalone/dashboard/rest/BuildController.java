@@ -3,11 +3,14 @@ package com.capitalone.dashboard.rest;
 import com.capitalone.dashboard.editors.CaseInsensitiveBuildStatusEditor;
 import com.capitalone.dashboard.misc.HygieiaException;
 import com.capitalone.dashboard.model.Build;
+import com.capitalone.dashboard.model.BuildComponentResponse;
 import com.capitalone.dashboard.model.BuildStatus;
 import com.capitalone.dashboard.model.DataResponse;
 import com.capitalone.dashboard.request.BuildDataCreateRequest;
 import com.capitalone.dashboard.request.BuildSearchRequest;
 import com.capitalone.dashboard.service.BuildService;
+import com.capitalone.dashboard.service.BuildServiceImpl;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -41,6 +44,11 @@ public class BuildController {
     @RequestMapping(value = "/build", method = GET, produces = APPLICATION_JSON_VALUE)
     public DataResponse<Iterable<Build>> builds(@Valid BuildSearchRequest request) {
         return buildService.search(request);
+    }
+    
+    @RequestMapping(value = "/resbuild", method = GET, produces = APPLICATION_JSON_VALUE)
+    public DataResponse<Iterable<BuildComponentResponse>> buildsAllComponents(@Valid BuildSearchRequest request) {
+        return ((BuildServiceImpl)buildService).searchAllComponents(request);
     }
 
     @RequestMapping(value = "/build", method = POST,

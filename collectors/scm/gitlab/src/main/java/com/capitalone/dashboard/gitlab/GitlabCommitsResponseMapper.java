@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.joda.time.DateTime;
 import org.springframework.stereotype.Component;
 
@@ -29,7 +30,15 @@ public class GitlabCommitsResponseMapper {
         
         Commit commit = new Commit();
         commit.setTimestamp(System.currentTimeMillis());
-        commit.setScmUrl(repoUrl);
+
+        String repoUrlCopy = repoUrl;
+        
+        if (repoUrl.endsWith(".git")) {
+            repoUrlCopy = StringUtils.removeEnd(repoUrl, ".git");
+            repoUrlCopy = repoUrlCopy.replaceAll("//.*?@", "//");
+        }
+        //String repoName = GitlabUrlUtility.getRepoName(repoUrl);
+        commit.setScmUrl(repoUrlCopy+"/commit/"+gitlabCommit.getId());
         commit.setScmBranch(branch);
         commit.setScmRevisionNumber(gitlabCommit.getId());
         commit.setScmAuthor(gitlabCommit.getAuthorName());

@@ -116,14 +116,16 @@
                     </div>
                 </div>
 
-                <div class="product-table-td team-data-cell" ng-repeat="stage in ctrl.orderedStages[team.collectorItemId] | flattenToArray" ng-if="stage!=team.prodStage">
+                <div class="product-table-td team-data-cell" ng-repeat="stage in ctrl.orderedStages[team.collectorItemId] | flattenToArray" ng-if="stage!=team.prodStage && ( stage === 'Build' || stage === 'Commit' || stage.includes('3a Success') )">
                     <div ng-class="{'team-stage-needs-configured': team.stages[stage].needsConfiguration}">
-                        <div class="product-table-th product-text-active">{{::stage.toUpperCase()}} </div>
+                        
+                        <div class="product-table-th product-text-active">{{::stage.substring(0,18)}} </div>
                         {{teamStageData = team.stages[stage].summary;""}}
+                        
                         <div ng-class="{'clickable':teamStageData.hasCommits}" ng-click="ctrl.viewTeamStageDetails(team, stage)">
-                            <div class="team-data-cell-header" ng-if="teamStageData.average">
+<!--                             <div class="team-data-cell-header" ng-if="teamStageData.average">
                                 <div class="clearfix team-data-cell-average-days">
-                                    <!-- only leading zeros get small size -->
+                                    
                                     <span class="team-time-average-lg" ng-if="teamStageData.average.days">{{teamStageData.average.days}}</span>
                                     <span class="team-time-average-desc" ng-if="teamStageData.average.days > 0">D</span>
                                     <span class="team-time-average-lg" ng-if="teamStageData.average.hours > 0 || teamStageData.average.days > 0">{{teamStageData.average.hours}}</span>
@@ -139,7 +141,7 @@
                                                     <span class="team-time-stddev-desc">{{teamStageData.deviation.descriptor}}</span>
                                                 </span>
                                 </div>
-                            </div>
+                            </div> -->
 
                             <div class="team-data-cell-body">
                                 <div class="team-data-cell-last-updated" title="{{teamStageData.lastUpdated.longDisplay}}" ng-if="teamStageData.lastUpdated">
@@ -151,10 +153,38 @@
                                 <div class="clearfix"></div>
                             </div>
 
+
+
                             <div class="team-data-cell-last-build" ng-if="stage === 'Build' && team.latestBuild">
                                 Latest build #: <span class="fa" ng-class="{'fa-refresh fa-spin product-text-active':team.latestBuild.inProgress, 'text-success fa-thumbs-up': !team.latestBuild.inProgress && team.latestBuild.success, 'text-danger fa-thumbs-down': !team.latestBuild.inProgress && !team.latestBuild.success}"></span> <span class="team-data-cell-last-build-num">{{team.latestBuild.number}}</span>
                             </div>
+
+
                         </div>
+
+
+<!-- My code -->        <div ng-if="stage != 'Build' && stage != 'Commit'">
+                        <div class="product-table-tr"
+                                as-sortable-item
+                                ng-repeat="stage1 in ctrl.orderedStages[team.collectorItemId] | flattenToArray" >
+                            <div ng-if="stage1.substring(0,4) === stage.substring(0,4)">
+                            {{teamStageData1 = team.stages[stage1].summary;""}}
+                            <div ng-if="stage1 != 'Build' && stage1 != 'Commit' && !stage1.includes('3a Success')" ng-class="{'clickable':teamStageData1.hasCommits}" ng-click="ctrl.viewTeamStageDetails(team, stage1)">
+                                
+                                <div class="team-data-cell-body">
+                                    {{::stage1.substring(0,18)}}
+                                    <commit-blocks commit-fail="teamStageData1.commitsOutsideTimeframe" commit-pass="teamStageData1.commitsInsideTimeframe"></commit-blocks>
+
+                                    <!-- <div class="clearfix"></div> -->
+                                </div>
+                                </div>
+                            </div>
+                        </div>
+                        </div>
+
+
+                            <!-- My Code ends -->
+
                     </div>
                 </div>
 

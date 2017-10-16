@@ -1,0 +1,263 @@
+<script>
+$('.tree .icon').click( function() {
+  $(this).parent().toggleClass('expanded').
+  closest('li').find('ul:first').
+  toggleClass('show-effect');
+});
+</script>
+<style>
+body {
+  font-family: Helvetica, sans-serif;
+  font-size:15px;
+}
+
+a {
+  /*font-size: 120%;*/
+  text-shadow:none;
+  color: #000;
+}
+ul.tree, .tree li {
+    list-style: none;
+    margin:0;
+    padding:0;
+    cursor: pointer;
+}
+
+.tree ul {
+  display:none;
+}
+
+.tree > li {
+  display:block;
+  background:#eee;
+  margin-bottom:2px;
+}
+
+.tree span {
+  display:block;
+  padding:10px 12px;
+
+}
+
+.icon {
+  display:inline-block;
+}
+
+.tree .hasChildren > .expanded {
+  background:#999;
+}
+
+.tree .hasChildren > .expanded a {
+  color:#fff;
+}
+
+.icon::before {
+  content:"+";
+  display:inline-block;
+  min-width:20px;
+  text-align:center;
+  color:#000;
+}
+.icon.expanded::before {
+  content:"-";
+  display:inline-block;
+  min-width:20px;
+  text-align:center;
+  color:#000;
+}
+
+.show-effect {
+  display:block!important;
+}
+table {
+    /*font-family: arial, sans-serif;*/
+    border-collapse: collapse;
+    width: 90%;
+    /*font-size: 15px;*/
+}
+
+td, th {
+    text-shadow:none;
+    border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+    color:black;
+    /*font-size:15px;*/
+}
+
+tr:nth-child(even) {
+    text-shadow:none;
+    background-color: #dddddd;
+    color:black;
+}
+</style>
+<div class="row ca-view">
+    <!-- <div class="col-lg-4 col-sm-12"> -->
+
+<div> Code Analysis Summary : </div><br>
+<ul class="tree">
+
+    <li class="tree__item hasChildren">
+        <span>
+            <div class="icon"></div>
+            <a>Average Line Coverage :  <b>{{ caWidget.avgLineCoverage | number:0 }} %</b></a>
+        </span>
+
+        <ul>
+            <li ng-repeat="item in caWidget.indCoverage">
+                <span><a href="{{item.url}}" target="_blank">{{ item.name }}:  <b>{{ item.line_coverage }} %</b></a></span>
+            </li>
+        </ul>
+
+    </li>
+
+    <li class="tree__item hasChildren">
+        <span>
+            <div class="icon"></div>
+            <a>Total Lines of Code :  <b>{{ caWidget.totalLoc }}</b> </a>
+        </span>
+
+        <ul>
+            <li ng-repeat="item in caWidget.indCoverage">
+                <span><a href="{{item.url}}" target="_blank">{{ item.name }}:  <b>{{ item.nloc }}</b> </a></span>
+            </li>
+        </ul>
+
+    </li>
+
+    <li class="tree__item hasChildren">
+        <span>
+            <div class="icon"></div>
+            <a>Average Grade :  <b>{{ caWidget.avgGrade }} </b></a>
+        </span>
+
+        <ul>
+            <li ng-repeat="item in caWidget.indCoverage">
+                <span><a href="{{item.url}}" target="_blank">{{ item.name }}:  <b>{{ item.grade }} </b></a></span>
+            </li>
+        </ul>
+
+    </li>
+
+
+</ul><br><br>
+<div> Code Repo Summary : </div><br>
+<ul class="tree">
+
+    <li class="tree__item hasChildren">
+        <span>
+            <div class="icon"></div>
+            <a>Total Commits in Last 15 Days:  <b>{{ caWidget.totalCommitCount }} </b></a>
+        </span>
+        <ul>
+
+            <li ng-repeat="item in caWidget.allcommitcomps">
+                <span>
+                  <div><a><u>{{ item.compName }}:  </u><b>{{ item.resCommits.length }} </b></a></div>
+                  <br>
+                  <div>
+                  <table>
+                      <tr>
+                        <th>Change</th>
+                        <th>Author</th>
+                        <th>Files</th>
+                      </tr>
+                      <tr ng-repeat="itd in item.resCommits">
+                        <td style="color:black;font-size: 15px"><a href="{{itd.scmUrl}}" target="_blank">{{ itd.scmCommitLog | limitTo: 60 }}{{itd.scmCommitLog.length > 60 ? '...' : ''}}</a></td>
+                        <td style="color:black;font-size: 15px"><a>{{ itd.scmAuthor }}</a></td>
+                        <td style="color:black;font-size: 15px"><a>{{ itd.numberOfChanges }}</a></td>
+                      </tr>
+                    </table>
+                    </div>
+                </span>
+            </li>
+        </ul>
+    </li>
+  </ul>
+
+  <ul class="tree">
+
+    <li class="tree__item hasChildren">
+        <span>
+            <div class="icon"></div>
+            <a>Top Contributor in Last 15 Days : <b> {{ caWidget.topContributor }} </b>  : {{ caWidget.topContribution }} Commit(s) </b></a>
+        </span>
+        <ul>
+            <li ng-repeat="item in caWidget.allcommitcomps">
+                <span><a>{{ item.compName }}:  <b> {{ item.topContributor }} </b> : {{ item.topContribution }} Commit(s)</a></span>
+            </li>
+        </ul>
+    </li>
+  </ul><br><br>
+  <div> Build Summary : </div><br>
+  <ul class="tree">
+
+    <li class="tree__item hasChildren">
+        <span>
+            <div class="icon"></div>
+            <a>Builds in Last 15 Days : <b> {{ caWidget.totalBuildCount }} </b> </a>
+        </span>
+        <ul>
+            <li ng-repeat="item in caWidget.allCompBuilds">
+                
+                <span>
+                  <div><a><u>{{ item.compName }}  </u> <b> {{ item.buildResArray.length }} </b></a></div>
+                  <br>
+                  <div>
+                  <table>
+                      <tr>
+                        <th>Build Number</th>
+                        <th>Duration</th>
+                        <th>Status</th>
+                      </tr>
+                      <tr ng-repeat="itd in item.buildResArray">
+                        <td style="color:black;font-size: 15px"><a href="{{itd.buildUrl}}" target="_blank">{{ itd.number }}</a></td>
+                        <td style="color:black;font-size: 15px"><a>{{ itd.duratiov }}</a></td>
+                        <td style="color:black;font-size: 15px"><a>{{ itd.status }}</a></td>
+                      </tr>
+                      </tr>
+                  </table>
+                    </div>
+                </span>
+            </li>
+        </ul>
+    </li>
+  </ul><br><br>
+
+  <div> Deploy Summary : </div><br>
+<ul class="tree">
+
+    <li class="tree__item hasChildren">
+        <span>
+            <div class="icon"></div>
+            <a>Deploy</a>
+        </span>
+        <ul>
+
+            <li ng-repeat="item in caWidget.allCompEnv">
+                <span>
+                  <div><a><u>{{ item.compName }}  </u></a></div>
+                  <br>
+                  <div>
+                  <table>
+                      <tr>
+                        <th ng-repeat="itd in item.environments">{{itd.name}}</th>
+                      </tr>
+                      <tr>
+                        <td ng-repeat="itd in item.environments" style="color:black;font-size: 15px">
+                                    <div ng-switch on="itd.units[0].deployed">
+                                      <a ng-switch-when="true"><font color="green">PASS</font></a>
+                                      <a ng-switch-default><font color="red">FAIL</font></a>
+                                    </div>
+                        </td>
+                      </tr>
+                  </table>
+                    </div>
+                </span>
+            </li>
+        </ul>
+    </li>
+  </ul>
+
+    <!-- </div> -->
+</div>

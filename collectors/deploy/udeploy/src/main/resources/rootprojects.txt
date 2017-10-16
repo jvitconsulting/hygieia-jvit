@@ -1,0 +1,5 @@
+CTI=Swaggy_Inc_Cti
+NTI=ContinuousDeliveryPipeline_Nti_IncrementalDti
+QAS1=ContinuousDeliveryPipeline_Qas_IncrementalQas
+QAS2=ContinuousDeliveryPipeline_Qas2_IncrementalQas
+PROD=ContinuousDeliveryPipeline_IncrementalProd

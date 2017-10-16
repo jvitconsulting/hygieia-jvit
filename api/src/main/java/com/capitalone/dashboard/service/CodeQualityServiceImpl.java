@@ -19,6 +19,7 @@ import com.capitalone.dashboard.request.CollectorRequest;
 import com.google.common.base.Objects;
 import com.google.common.collect.Iterables;
 import com.mysema.query.BooleanBuilder;
+
 import org.apache.commons.lang.StringUtils;
 import org.bson.types.ObjectId;
 import org.joda.time.LocalDate;
@@ -65,8 +66,10 @@ public class CodeQualityServiceImpl implements CodeQualityService {
 //                Iterables.concat(concatinatedResult, result.getResult());
 //            }
             return emptyResponse();
+        }if (request.getMax() == 20){
+        	return searchAllComponents(request);
         }
-
+        
         return searchType(request);
     }
 
@@ -106,6 +109,41 @@ public class CodeQualityServiceImpl implements CodeQualityService {
         Collector collector = collectorRepository.findOne(item.getCollectorId());
         long lastExecuted = (collector == null) ? 0 : collector.getLastExecuted();
         return new DataResponse<>(result, lastExecuted,reportUrl);
+    }
+    
+    
+    public DataResponse<Iterable<CodeQuality>> searchAllComponents(CodeQualityRequest request) {
+        System.out.println("Searching all comp");
+        if (request == null) {
+            return emptyResponse();
+        }
+        if (request.getType() == null) { 
+            return emptyResponse();
+        }
+    	
+        QCodeQuality quality = new QCodeQuality("quality");
+        Iterable<Component> findAll = componentRepository.findAll();
+        BooleanBuilder builder = new BooleanBuilder();
+        CodeQualityType qualityType = Objects.firstNonNull(request.getType(),
+                CodeQualityType.StaticAnalysis);
+        for (Component comp : findAll) {
+        	List<CollectorItem> items = comp.getCollectorItems().get(qualityType);
+            if (items != null && !items.isEmpty()) {
+            	CollectorItem item = Iterables.getFirst(items, null);
+            	builder.or(quality.collectorItemId.eq(item.getId()));
+            }
+		}
+        Iterable<CodeQuality> result;
+        result = codeQualityRepository.findAll(builder.getValue(), quality.timestamp.desc());
+		// String instanceUrl = (String)item.getOptions().get("instanceUrl");
+		// String projectId = (String) item.getOptions().get("projectId");
+		// String reportUrl =
+		// getReportURL(instanceUrl,"dashboard/index/",projectId);
+		// Collector collector =
+		// collectorRepository.findOne(item.getCollectorId());
+		// long lastExecuted = (collector == null) ? 0 :
+		// collector.getLastExecuted();
+		return new DataResponse<>(result, 10, "reporturl");
     }
 
 

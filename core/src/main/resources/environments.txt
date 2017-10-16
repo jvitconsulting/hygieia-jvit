@@ -1,0 +1,21 @@
+CTI_0 - Check Current B4 Start
+CTI_1a SBE Incremental Deploy
+CTI_1b SFE Incremental Deploy
+CTI_2 Validate Deploy and Run System Tests
+CTI_3a Success - Output Stable (specific) & Current + Update AcceptedVersion
+NTI_0 - Check Current B4 Start
+NTI_1 SBE/SFE Incremental Deploy
+NTI_2 Validate Deploy and Run System Tests
+NTI_3a Success
+QAS1_0 - Check Current Before Start
+QAS1_1a SBE/SFE Deploy
+QAS1_2 Validate Deploy and Execute System Team Tests
+QAS1_3a Success
+QAS2_0 - Check Current Before Start
+QAS2_1a SBE/SFE Deploy
+QAS2_2 Validate Deploy and Execute System Team Tests
+QAS2_3a Success
+PROD_0 - Check Current Before Start
+PROD_1a SBE/SFE Deploy
+PROD_2 Validate Deploy and Execute System Team Tests
+PROD_3a Success

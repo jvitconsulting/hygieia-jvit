@@ -13,7 +13,7 @@
                 </thead>
                 <tbody>
                 <tr ng-repeat="commit in detail.commits">
-                    <td>{{::commit.scmRevisionNumber | limitTo:8}}</td>
+                    <td><a href={{::commit.scmUrl}}><u>{{::commit.scmRevisionNumber | limitTo:8}}</u></a></td>
                     <td>{{::commit.scmAuthor}}</td>
                     <td>{{::commit.scmCommitLog}}</td>
                     <td>{{::commit.scmCommitTimestamp | date:'MMM d, HH:mm:ss'}}</td>

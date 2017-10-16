@@ -37,7 +37,7 @@ public class CommitEventListener extends HygieiaMongoEventListener<Commit> {
                 .stream()
                 .filter(this::dashboardHasBuildCollector)
                 .forEach(teamDashboard -> {
-                    if (CommitType.New.equals(commit.getType())) {
+                    if (CommitType.New.equals(commit.getType()) || (CommitType.Merge.equals(commit.getType()))) {
                         PipelineCommit pipelineCommit = new PipelineCommit(commit, commit.getScmCommitTimestamp());
                         Pipeline pipeline = getOrCreatePipeline(teamDashboard);
                         pipeline.addCommit(PipelineStage.COMMIT.getName(), pipelineCommit);

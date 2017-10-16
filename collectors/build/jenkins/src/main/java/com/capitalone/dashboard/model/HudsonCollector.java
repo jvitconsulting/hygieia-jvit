@@ -30,7 +30,7 @@ public class HudsonCollector extends Collector {
 
     public static HudsonCollector prototype(List<String> buildServers, List<String> niceNames) {
         HudsonCollector protoType = new HudsonCollector();
-        protoType.setName("Hudson");
+        protoType.setName("TeamCityBuild");
         protoType.setCollectorType(CollectorType.Build);
         protoType.setOnline(true);
         protoType.setEnabled(true);

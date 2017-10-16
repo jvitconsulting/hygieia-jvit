@@ -2,9 +2,12 @@ package com.capitalone.dashboard.rest;
 
 import com.capitalone.dashboard.misc.HygieiaException;
 import com.capitalone.dashboard.model.Commit;
+import com.capitalone.dashboard.model.CommitComponentResponse;
 import com.capitalone.dashboard.model.DataResponse;
 import com.capitalone.dashboard.request.CommitRequest;
 import com.capitalone.dashboard.service.CommitService;
+import com.capitalone.dashboard.service.CommitServiceImpl;
+
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +38,11 @@ public class ZCommitController {
     @RequestMapping(value = "/commit", method = GET, produces = APPLICATION_JSON_VALUE)
     public DataResponse<Iterable<Commit>> search(@Valid CommitRequest request) {
         return commitService.search(request);
+    }
+    
+    @RequestMapping(value = "/rescommit", method = GET, produces = APPLICATION_JSON_VALUE)
+    public DataResponse<Iterable<CommitComponentResponse>> searchres(@Valid CommitRequest request) {
+        return ((CommitServiceImpl)commitService).searchAllComponents(request);
     }
 
 

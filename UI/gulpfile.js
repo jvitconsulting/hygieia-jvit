@@ -130,6 +130,7 @@ function server(ghostMode) {
       }
 
       browserSync.init({
+	        port:80,
           server: {
               baseDir: hygieia.dist,
               startPath: '/',

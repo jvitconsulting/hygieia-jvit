@@ -27,13 +27,15 @@
 						<th>Revision</th>
 						<th>Author</th>
 						<th>Message</th>
+						<th>Time</th>
 					</tr>
 				</thead>
 				<tbody>
 					<tr ng-repeat="changeSet in detail.build.sourceChangeSet">
-						<td>{{::changeSet.scmRevisionNumber | limitTo:8}}</td>
+						<td><a href={{::changeSet.scmUrl}}><u>{{::changeSet.scmRevisionNumber | limitTo:8}}</u></a></td>
 						<td>{{::changeSet.scmAuthor}}</td>
 						<td>{{::changeSet.scmCommitLog}}</td>
+						<td>{{::changeSet.scmCommitTimestamp | date:'MMM d, HH:mm:ss'}}</td>
 					</tr>
 				</tbody>
 			</table>

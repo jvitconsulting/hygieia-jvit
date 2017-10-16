@@ -14,7 +14,12 @@ public class UDeployEnvResCompData {
     private String resourceName;
     private String parentAgentName;
     private boolean online;
+	private Build buildInfo;
     
+	public Build getBuildInfo() {
+		return buildInfo;
+	}
+	
 	public ObjectId getCollectorItemId() {
 		return collectorItemId;
 	}
@@ -80,5 +85,8 @@ public class UDeployEnvResCompData {
 	}
 	public void setOnline(boolean online) {
 		this.online = online;
+	}
+	public void setBuildInfo(Build buildInfo) {
+		this.buildInfo = buildInfo;	
 	}
 }

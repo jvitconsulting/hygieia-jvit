@@ -1,0 +1,22 @@
+<widget-modal widget-modal-title="Configure Orchestrator Summary Widget" class="ca-config">
+    <form name="configForm" role="form"
+          ng-submit="caWidget.submit(caWidget.caCollectorItem, caWidget.saCollectorItem, caWidget.ossCollectorItem, caWidget.testConfigs)"
+          novalidate="novalidate">
+                <input type="checkbox" disabled="disabled" checked="checked">Code Analysis<br>
+                <input type="checkbox" disabled="disabled">Repo<br>
+                <input type="checkbox" disabled="disabled">Build<br>
+                <input type="checkbox" disabled="disabled">Deploy<br>
+        <form-group class="text-center">
+            <div class="form group text-center">
+
+                <label></label>
+                <button type="submit" class="btn btn-primary btn-wide">Save</button>
+            </div>
+        </form-group>
+    </form>
+</widget-modal>
+<script type="text/ng-template" id="sonarProjectUrlTemplate.html">
+	<a title={{match.model.options.instanceUrl}}>
+		<span ng-bind-html="match.label | uibTypeaheadHighlight:query"/> 
+	</a>
+</script>

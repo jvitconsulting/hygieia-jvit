@@ -8,7 +8,8 @@
         .module(HygieiaConfig.module + '.core')
         .constant('DashboardType', {
             PRODUCT: 'product',
-            TEAM: 'team'
+            TEAM: 'team',
+            CO: 'co'
         })
         .factory('dashboardData', dashboardData);
 
@@ -128,6 +129,10 @@
                 {
                     "id": "product",
                     "name": "Product"
+                },
+                                {
+                    "id": "co",
+                    "name": "CO"
                 }
             ];
 

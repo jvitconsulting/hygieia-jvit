@@ -12,6 +12,9 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestOperations;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 
 import com.capitalone.dashboard.collector.GitlabSettings;
 import com.capitalone.dashboard.gitlab.model.GitlabCommit;
@@ -25,6 +28,8 @@ import com.capitalone.dashboard.util.Supplier;
 
 @Component
 public class DefaultGitlabGitClient implements  GitlabGitClient {
+    private static final Log LOG = LogFactory.getLog(DefaultGitlabGitClient.class);
+
 
     //Gitlab max results per page. Reduces amount of network calls.
     private static final int RESULTS_PER_PAGE = 100;
@@ -50,15 +55,18 @@ public class DefaultGitlabGitClient implements  GitlabGitClient {
         List<Commit> commits = new ArrayList<>();
 
 		URI apiUrl = gitlabUrlUtility.buildApiUrl(repo, firstRun, RESULTS_PER_PAGE);
-		String providedApiToken = repo.getUserId();
+		String providedApiToken = "";//repo.getUserId();
 		String apiToken = (StringUtils.isNotBlank(providedApiToken)) ? providedApiToken:gitlabSettings.getApiToken();
-
+                 LOG.info("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                 LOG.info(apiToken);
+                LOG.info(apiUrl);
 		boolean hasMorePages = true;
 		int nextPage = 1;
 		while (hasMorePages) {
 			ResponseEntity<GitlabCommit[]> response = makeRestCall(apiUrl, apiToken);
 			List<Commit> pageOfCommits = responseMapper.map(response.getBody(), repo.getRepoUrl(), repo.getBranch());
 			commits.addAll(pageOfCommits);
+                        LOG.info("Extracted commit size =" + pageOfCommits.size());
 			if (pageOfCommits.size() < RESULTS_PER_PAGE) {
 				hasMorePages = false;
 				continue;

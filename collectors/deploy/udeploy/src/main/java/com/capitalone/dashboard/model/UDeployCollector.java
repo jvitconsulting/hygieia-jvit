@@ -22,7 +22,7 @@ public class UDeployCollector extends Collector {
 
     public static UDeployCollector prototype(List<String> servers, List<String> niceNames) {
         UDeployCollector protoType = new UDeployCollector();
-        protoType.setName("UDeploy");
+        protoType.setName("TeamCity");
         protoType.setCollectorType(CollectorType.Deployment);
         protoType.setOnline(true);
         protoType.setEnabled(true);

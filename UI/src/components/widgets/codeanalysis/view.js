@@ -82,6 +82,20 @@
 
             ctrl.lineCoverage = getMetric(caData.metrics, 'line_coverage');
 
+            var grade = 'A';
+            var lc = ctrl.lineCoverage.value ;
+            if( lc < 60){
+                grade='F';
+            }else if(lc < 70){
+                grade='D';
+            }else if(lc < 80){
+                grade='C';
+            }else if(lc < 90){
+                grade='B';
+            }
+            
+            ctrl.grade = grade ;
+
             coveragePieChart(ctrl.lineCoverage);
 
             deferred.resolve(response.lastUpdated);

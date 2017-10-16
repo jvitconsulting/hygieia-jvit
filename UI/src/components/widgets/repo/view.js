@@ -125,19 +125,25 @@
 
             var lastDayCount = 0;
             var lastDayContributors = [];
+            var lastDayTopContributorsMap = {};
 
             var lastSevenDayCount = 0;
             var lastSevenDaysContributors = [];
+            var lastSevenDaysTopContributorsMap = {};
 
             var lastFourteenDayCount = 0;
             var lastFourteenDaysContributors = [];
+            var lastFourteenDaysTopContributorsMap = {};
 
             // loop through and add to counts
             _(data).forEach(function (commit) {
 
                 if (commit.scmCommitTimestamp >= today.getTime()) {
                     lastDayCount++;
-
+                    if(!lastDayTopContributorsMap[commit.scmAuthor]){
+                        lastDayTopContributorsMap[commit.scmAuthor] =1;
+                    }
+                    lastDayTopContributorsMap[commit.scmAuthor] = lastDayTopContributorsMap[commit.scmAuthor]+1;
                     if (lastDayContributors.indexOf(commit.scmAuthor) === -1) {
                         lastDayContributors.push(commit.scmAuthor);
                     }
@@ -145,7 +151,10 @@
 
                 if (commit.scmCommitTimestamp >= sevenDays.getTime()) {
                     lastSevenDayCount++;
-
+                    if(!lastSevenDaysTopContributorsMap[commit.scmAuthor]){
+                        lastSevenDaysTopContributorsMap[commit.scmAuthor] =1;
+                    }
+                    lastSevenDaysTopContributorsMap[commit.scmAuthor] = lastSevenDaysTopContributorsMap[commit.scmAuthor]+1;
                     if (lastSevenDaysContributors.indexOf(commit.scmAuthor) === -1) {
                         lastSevenDaysContributors.push(commit.scmAuthor);
                     }
@@ -154,11 +163,46 @@
                 if (commit.scmCommitTimestamp >= fourteenDays.getTime()) {
                     lastFourteenDayCount++;
                     ctrl.commits.push(commit);
+                    if(!lastFourteenDaysTopContributorsMap[commit.scmAuthor]){
+                        lastFourteenDaysTopContributorsMap[commit.scmAuthor] =1;
+                    }
+                    lastFourteenDaysTopContributorsMap[commit.scmAuthor] = lastFourteenDaysTopContributorsMap[commit.scmAuthor]+1;
                     if (lastFourteenDaysContributors.indexOf(commit.scmAuthor) === -1) {
                         lastFourteenDaysContributors.push(commit.scmAuthor);
                     }
                 }
 
+            });
+
+            var value = 0 ; 
+            var lastDayTopContribution = 0;
+            var lastDayTopContributor = '';
+            Object.keys(lastDayTopContributorsMap).forEach(function(key) {
+                value = lastDayTopContributorsMap[key];
+                if( value > lastDayTopContribution){
+                    lastDayTopContribution = value ;
+                    lastDayTopContributor = key;
+                }
+            });
+
+            var lastSevenDayTopContribution = 0;
+            var lastSevenDayTopContributor = '';
+            Object.keys(lastSevenDaysTopContributorsMap).forEach(function(key) {
+                value = lastSevenDaysTopContributorsMap[key];
+                if( value > lastSevenDayTopContribution){
+                    lastSevenDayTopContribution = value ;
+                    lastSevenDayTopContributor = key;
+                }
+            });
+
+            var lastFourteenDayTopContribution = 0;
+            var lastFourteenDayTopContributor = '';
+            Object.keys(lastFourteenDaysTopContributorsMap).forEach(function(key) {
+                value = lastFourteenDaysTopContributorsMap[key];
+                if( value > lastFourteenDayTopContribution){
+                    lastFourteenDayTopContribution = value ;
+                    lastFourteenDayTopContributor = key;
+                }
             });
 
             ctrl.lastDayCommitCount = lastDayCount;
@@ -167,6 +211,10 @@
             ctrl.lastSevenDaysContributorCount = lastSevenDaysContributors.length;
             ctrl.lastFourteenDaysCommitCount = lastFourteenDayCount;
             ctrl.lastFourteenDaysContributorCount = lastFourteenDaysContributors.length;
+
+            ctrl.lastDayTopContributor = lastDayTopContributor;
+            ctrl.lastSevenDayTopContributor = lastSevenDayTopContributor;
+            ctrl.lastFourteenDayTopContributor = lastFourteenDayTopContributor;
 
 
             function toMidnight(date) {

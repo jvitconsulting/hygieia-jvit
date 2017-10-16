@@ -1,11 +1,41 @@
 package com.capitalone.dashboard.service;
 
+import static com.capitalone.dashboard.service.DeployServiceImpl.RundeckXMLParser.getAttributeValue;
+import static com.capitalone.dashboard.service.DeployServiceImpl.RundeckXMLParser.getChildNodeAttribute;
+import static com.capitalone.dashboard.service.DeployServiceImpl.RundeckXMLParser.getChildNodeValue;
+
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+import org.apache.commons.lang.StringUtils;
+import org.bson.types.ObjectId;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+
 import com.capitalone.dashboard.misc.HygieiaException;
 import com.capitalone.dashboard.model.Collector;
 import com.capitalone.dashboard.model.CollectorItem;
 import com.capitalone.dashboard.model.CollectorType;
 import com.capitalone.dashboard.model.Component;
 import com.capitalone.dashboard.model.DataResponse;
+import com.capitalone.dashboard.model.DeployComponentResponse;
 import com.capitalone.dashboard.model.EnvironmentComponent;
 import com.capitalone.dashboard.model.EnvironmentStatus;
 import com.capitalone.dashboard.model.deploy.DeployableUnit;
@@ -20,32 +50,6 @@ import com.capitalone.dashboard.request.CollectorRequest;
 import com.capitalone.dashboard.request.DeployDataCreateRequest;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-import org.apache.commons.lang.StringUtils;
-import org.bson.types.ObjectId;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.function.Function;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
-import static com.capitalone.dashboard.service.DeployServiceImpl.RundeckXMLParser.getAttributeValue;
-import static com.capitalone.dashboard.service.DeployServiceImpl.RundeckXMLParser.getChildNodeAttribute;
-import static com.capitalone.dashboard.service.DeployServiceImpl.RundeckXMLParser.getChildNodeValue;
 
 @Service
 public class DeployServiceImpl implements DeployService {
@@ -83,6 +87,91 @@ public class DeployServiceImpl implements DeployService {
 
         return getDeployStatus(cis);
     }
+    
+    
+    public DataResponse<List<DeployComponentResponse>> searchAllComponents() {
+
+	    List<CollectorItem> deployCollectorItems = new ArrayList<CollectorItem>();
+	    Iterable<Component> findAll = componentRepository.findAll();
+	    for (Component comp : findAll) {
+	    	List<CollectorItem> items = comp.getCollectorItems().get(CollectorType.Deployment);
+	        if (items != null && !items.isEmpty()) {
+	        	CollectorItem item = Iterables.getFirst(items, null);
+	        	deployCollectorItems.add(item);
+	        }
+		}
+	    
+	    Map<String,List<Environment>> compEnvMap = new HashMap<String, List<Environment>>();
+
+        for (CollectorItem item : deployCollectorItems) {
+
+        	ObjectId collectorItemId = item.getId();
+        	String compName = getCompName(collectorItemId);
+        	
+        	List<Environment> list = compEnvMap.get(compName);
+			if(list == null){
+				list = new ArrayList<Environment>();
+				compEnvMap.put(compName, list);
+        	}
+        	
+        	
+            List<EnvironmentComponent> components = environmentComponentRepository
+                    .findByCollectorItemId(collectorItemId);
+            List<EnvironmentStatus> statuses = environmentStatusRepository
+                    .findByCollectorItemId(collectorItemId);
+
+            for (Map.Entry<Environment, List<EnvironmentComponent>> entry : groupByEnvironment(
+                    components).entrySet()) {
+                Environment env = entry.getKey();
+                list.add(env);
+                for (EnvironmentComponent envComponent : entry.getValue()) {
+                    env.getUnits().add(
+                            new DeployableUnit(envComponent, servers(envComponent,
+                                    statuses)));
+                }
+            }
+
+        }
+        
+        Set<Entry<String, List<Environment>>> entrySet = compEnvMap.entrySet();
+        List<DeployComponentResponse> deploycomps = new ArrayList<DeployComponentResponse>();
+
+        for (Entry<String, List<Environment>> entry : entrySet) {
+        	DeployComponentResponse dcr = new DeployComponentResponse();
+        	dcr.setName(entry.getKey());
+        	List<Environment> value = entry.getValue();
+        	List<Environment> value1 = new ArrayList<Environment>();
+        	
+        	for (Environment environment : value) {
+				DeployableUnit unit = environment.getUnits().get(0);
+				environment.getUnits().clear();
+				if (environment.getName().contains("Success") || !unit.isDeployed()) {
+					value1.add(environment);
+				}
+				environment.getUnits().add(unit);
+			}
+			dcr.setEnvironments(value1);
+        	deploycomps.add(dcr);
+		}
+        
+        return new DataResponse<>(deploycomps,0);
+	   
+	    
+	}
+    
+    private String getCompName(ObjectId collectorItemId) {
+        Iterable<Component> findAll = componentRepository.findAll();
+        for (Component comp : findAll) {
+        	List<CollectorItem> items = comp.getCollectorItems().get(CollectorType.Deployment);
+            if (items != null && !items.isEmpty()) {
+            	CollectorItem item = Iterables.getFirst(items, null);
+            	if(item.getId().equals(collectorItemId)){
+            		return comp.getName();
+            	}
+            }
+		}
+		return "";
+	}
 
     private DataResponse<List<Environment>> getDeployStatus(Collection<CollectorItem> deployCollectorItems) {
         List<Environment> environments = new ArrayList<>();

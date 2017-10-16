@@ -1,19 +1,15 @@
 package com.capitalone.dashboard.service;
 
-import com.capitalone.dashboard.misc.HygieiaException;
-import com.capitalone.dashboard.model.Collector;
-import com.capitalone.dashboard.model.CollectorItem;
-import com.capitalone.dashboard.model.CollectorType;
-import com.capitalone.dashboard.model.Commit;
-import com.capitalone.dashboard.model.Component;
-import com.capitalone.dashboard.model.DataResponse;
-import com.capitalone.dashboard.model.QCommit;
-import com.capitalone.dashboard.repository.CollectorRepository;
-import com.capitalone.dashboard.repository.CommitRepository;
-import com.capitalone.dashboard.repository.ComponentRepository;
-import com.capitalone.dashboard.request.CommitRequest;
-import com.mysema.query.BooleanBuilder;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.apache.commons.lang.StringUtils;
+import org.bson.types.ObjectId;
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.json.simple.JSONArray;
@@ -24,9 +20,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import com.capitalone.dashboard.misc.HygieiaException;
+import com.capitalone.dashboard.model.Collector;
+import com.capitalone.dashboard.model.CollectorItem;
+import com.capitalone.dashboard.model.CollectorType;
+import com.capitalone.dashboard.model.Commit;
+import com.capitalone.dashboard.model.CommitComponentResponse;
+import com.capitalone.dashboard.model.CommitResponse;
+import com.capitalone.dashboard.model.Component;
+import com.capitalone.dashboard.model.DataResponse;
+import com.capitalone.dashboard.model.QCommit;
+import com.capitalone.dashboard.repository.CollectorRepository;
+import com.capitalone.dashboard.repository.CommitRepository;
+import com.capitalone.dashboard.repository.ComponentRepository;
+import com.capitalone.dashboard.request.CommitRequest;
+import com.google.common.collect.Iterables;
+import com.mysema.query.BooleanBuilder;
 
 @Service
 public class CommitServiceImpl implements CommitService {
@@ -49,7 +58,11 @@ public class CommitServiceImpl implements CommitService {
 
     @Override
     public DataResponse<Iterable<Commit>> search(CommitRequest request) {
-        QCommit commit = new QCommit("search");
+    	return searchSingleComponent(request);
+    }
+
+	private DataResponse<Iterable<Commit>> searchSingleComponent(CommitRequest request) {
+		QCommit commit = new QCommit("search");
         BooleanBuilder builder = new BooleanBuilder();
 
         Component component = componentRepository.findOne(request.getComponentId());
@@ -85,9 +98,121 @@ public class CommitServiceImpl implements CommitService {
 
         Collector collector = collectorRepository.findOne(item.getCollectorId());
         return new DataResponse<>(commitRepository.findAll(builder.getValue()), collector.getLastExecuted());
+	}
+    
+    public DataResponse<Iterable<CommitComponentResponse>> searchAllComponents(CommitRequest request) {
+        if (request == null) {
+            return emptyResponse();
+        }
+        QCommit commit = new QCommit("search");
+        BooleanBuilder builder = new BooleanBuilder();
+        
+        Iterable<Component> findAll = componentRepository.findAll();
+        for (Component comp : findAll) {
+        	List<CollectorItem> items = comp.getCollectorItems().get(CollectorType.SCM);
+            if (items != null && !items.isEmpty()) {
+            	CollectorItem item = Iterables.getFirst(items, null);
+            	builder.or(commit.collectorItemId.eq(item.getId()));
+            }
+		}
+		long endTimeTarget = new LocalDate().minusDays(14).toDate().getTime();
+		builder.and(commit.scmCommitTimestamp.goe(endTimeTarget));
+        Iterable<Commit> result;
+        result = commitRepository.findAll(builder.getValue());
+        
+        Map<String,ArrayList<CommitResponse>> compCommitmap = new HashMap<String,ArrayList<CommitResponse>>();
+        Map<String,ArrayList<String>> compNameAuthorsMap = new HashMap<String,ArrayList<String>>();
+        
+        
+        for (Commit comt : result) {
+			
+        	String compName = getCompName(comt.getCollectorItemId());
+        	
+        	ArrayList<CommitResponse> commitResArray = compCommitmap.get(compName);
+        	if(commitResArray==null){
+				commitResArray = new ArrayList<CommitResponse>();
+        		compCommitmap.put(compName,commitResArray);
+        	}
+        	
+          	ArrayList<String> authorsList = compNameAuthorsMap.get(compName);
+        	if(authorsList==null){
+        		authorsList = new ArrayList<String>();
+        		compNameAuthorsMap.put(compName,authorsList);
+        	}
+        	authorsList.add(comt.getScmAuthor());
+        	
+			CommitResponse commitRes = new CommitResponse();
+			commitRes.setNumberOfChanges(comt.getNumberOfChanges());
+			commitRes.setScmAuthor(comt.getScmAuthor());
+			commitRes.setScmCommitLog(comt.getScmCommitLog());
+			commitRes.setScmCommitTimestamp(comt.getScmCommitTimestamp());
+			commitRes.setScmUrl(comt.getScmUrl());
+			commitRes.setComponentName(compName);
+			commitResArray.add(commitRes);
+			
+		}
+        
+        ArrayList<CommitComponentResponse> commitCompResArray = new ArrayList<CommitComponentResponse>();
+        Set<String> keySet = compCommitmap.keySet();
+        
+        for (String compName : keySet) {
+			CommitComponentResponse resComp = new CommitComponentResponse();
+			resComp.setCompName(compName);
+			ArrayList<CommitResponse> resCommits = compCommitmap.get(compName);
+			resComp.setResCommit(resCommits);
+			
+			Map<String,Integer> mapp = new HashMap<String,Integer>();
+			for (CommitResponse comm : resCommits) {
+				String scmAuthor = comm.getScmAuthor();
+				Integer integer = mapp.get(scmAuthor);
+				if (integer == null) {
+					mapp.put(scmAuthor, 1);
+				} else {
+					mapp.put(scmAuthor, integer + 1);
+				}
+			}
+			
+			int max = 0;
+			String author = null; 
+			
+			Collection<String> values = mapp.keySet();
+			for (String authorName : values) {
+				Integer integer = mapp.get(authorName);
+				if(integer>max){
+					max = integer;
+					author=authorName;
+				}
+			}
+			resComp.setTopContributor(author);
+			resComp.setTopContribution(max);
+			
+			commitCompResArray.add(resComp);
+			
+		}
+        
+		return new DataResponse<>(commitCompResArray, 10);
     }
 
-    @Override
+    private String getCompName(ObjectId collectorItemId) {
+        Iterable<Component> findAll = componentRepository.findAll();
+        for (Component comp : findAll) {
+        	List<CollectorItem> items = comp.getCollectorItems().get(CollectorType.SCM);
+            if (items != null && !items.isEmpty()) {
+            	CollectorItem item = Iterables.getFirst(items, null);
+            	if(item.getId().equals(collectorItemId)){
+            		return comp.getName();
+            	}
+            }
+		}
+		return "";
+	}
+
+	private DataResponse<Iterable<CommitComponentResponse>> emptyResponse() {
+    	Iterable<CommitComponentResponse> results = new ArrayList<>();
+        return new DataResponse<>(results, new Date().getTime());
+	}
+
+	@Override
     public String createFromGitHubv3(JSONObject request) throws ParseException, HygieiaException {
         GitHubv3 gitHubv3 = new GitHubv3(request.toJSONString());
 

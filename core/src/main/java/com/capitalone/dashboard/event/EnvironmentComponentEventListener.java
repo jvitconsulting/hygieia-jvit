@@ -1,20 +1,41 @@
 package com.capitalone.dashboard.event;
 
-import com.capitalone.dashboard.model.*;
-import com.capitalone.dashboard.repository.*;
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+import java.io.InputStream;
+import java.io.PrintWriter;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.mapping.event.AfterSaveEvent;
 
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.*;
+import com.capitalone.dashboard.model.Build;
+import com.capitalone.dashboard.model.CollectorItem;
+import com.capitalone.dashboard.model.Commit;
+import com.capitalone.dashboard.model.Component;
+import com.capitalone.dashboard.model.Dashboard;
+import com.capitalone.dashboard.model.EnvironmentComponent;
+import com.capitalone.dashboard.model.Pipeline;
+import com.capitalone.dashboard.model.PipelineCommit;
+import com.capitalone.dashboard.model.PipelineStage;
+import com.capitalone.dashboard.model.RepoBranch;
+import com.capitalone.dashboard.model.SCM;
+import com.capitalone.dashboard.repository.BinaryArtifactRepository;
+import com.capitalone.dashboard.repository.BuildRepository;
+import com.capitalone.dashboard.repository.CollectorItemRepository;
+import com.capitalone.dashboard.repository.CollectorRepository;
+import com.capitalone.dashboard.repository.CommitRepository;
+import com.capitalone.dashboard.repository.ComponentRepository;
+import com.capitalone.dashboard.repository.DashboardRepository;
+import com.capitalone.dashboard.repository.JobRepository;
+import com.capitalone.dashboard.repository.PipelineRepository;
 
 @org.springframework.stereotype.Component
 public class EnvironmentComponentEventListener extends HygieiaMongoEventListener<EnvironmentComponent> {
@@ -22,10 +43,14 @@ public class EnvironmentComponentEventListener extends HygieiaMongoEventListener
 
     private final DashboardRepository dashboardRepository;
     private final ComponentRepository componentRepository;
-    private final BinaryArtifactRepository binaryArtifactRepository;
+    public final BinaryArtifactRepository binaryArtifactRepository;
     private final BuildRepository buildRepository;
-    private final JobRepository<?> jobRepository;
+    public final JobRepository<?> jobRepository;
     private final CommitRepository commitRepository;
+
+	private ArrayList<String> envNames;
+    
+
 
     @Autowired
     public EnvironmentComponentEventListener(DashboardRepository dashboardRepository,
@@ -43,7 +68,51 @@ public class EnvironmentComponentEventListener extends HygieiaMongoEventListener
         this.buildRepository = buildRepository;
         this.jobRepository = jobRepository;
         this.commitRepository = commitRepository;
+        
+        this.envNames = new ArrayList<String>();
+    		envNames.add("CTI_0 - Check Current B4 Start");
+    		envNames.add("CTI_1a SBE Incremental Deploy");
+    		envNames.add("CTI_1b SFE Incremental Deploy");
+    		envNames.add("CTI_2 Validate Deploy and Run System Tests");
+    		envNames.add("CTI_3a Success - Output Stable (specific) & Current + Update AcceptedVersion");
+    		envNames.add("NTI_0 - Check Current B4 Start");
+    		envNames.add("NTI_1 SBE/SFE Incremental Deploy");
+    		envNames.add("NTI_2 Validate Deploy and Run System Tests");
+    		envNames.add("NTI_3a Success");
+    		envNames.add("QAS1_0 - Check Current Before Start");
+    		envNames.add("QAS1_1a SBE/SFE Deploy");
+    		envNames.add("QAS1_2 Validate Deploy and Execute System Team Tests");
+    		envNames.add("QAS1_3a Success");
+        envNames.add("QAS2_0 - Check Current Before Start");
+        envNames.add("QAS2_1a SBE/SFE Deploy");
+        envNames.add("QAS2_2 Validate Deploy and Execute System Team Tests");
+        envNames.add("QAS2_3a Success");
+    		envNames.add("PROD_0 - Check Current Before Start");
+    		envNames.add("PROD_1a SBE/SFE Deploy");
+    		envNames.add("PROD_2 Validate Deploy and Execute System Team Tests");
+    		envNames.add("PROD_3a Success");
+        
+//        this.envNames = new ArrayList<String>();
+//		try {
+//			BufferedReader envreader = new BufferedReader(new InputStreamReader(getResourceFromClassLoader("environments.txt")));
+//			String envname;
+//			while ((envname = envreader.readLine()) != null) {
+//				envNames.add(envname);
+//			}
+//			envreader.close();
+//		} catch (Exception e) {
+//			LOGGER.error(e.getLocalizedMessage());
+//		}
+        
     }
+    
+    private InputStream getResourceFromClassLoader(String name) {
+		InputStream in = Thread.currentThread().getContextClassLoader().getResourceAsStream(name);
+			if (in == null) {
+				throw new NullPointerException("No resource returned.");
+		}
+		return in;
+	}
 
     @Override
     public void onAfterSave(AfterSaveEvent<EnvironmentComponent> event) {
@@ -88,75 +157,23 @@ public class EnvironmentComponentEventListener extends HygieiaMongoEventListener
      */
     @SuppressWarnings("PMD.NPathComplexity")
     private void addCommitsToEnvironmentStage(EnvironmentComponent environmentComponent, Pipeline pipeline){
-        EnvironmentStage currentStage = getOrCreateEnvironmentStage(pipeline, environmentComponent.getEnvironmentName());
-        String pseudoEnvName = environmentComponent.getEnvironmentName();
-        if (LOGGER.isDebugEnabled()) {
-        	LOGGER.debug("Attempting to find new artifacts to process for environment '" + environmentComponent.getEnvironmentName() + "'");
-        }
-        
-        String artifactName = environmentComponent.getComponentName();
-        String artifactExtension = null;
-        int dotIdx = artifactName.lastIndexOf('.');
-        if (dotIdx > 0) {
-        	// If idx is 0 starts with a dot... in which case not an extension
-            artifactExtension = artifactName.substring(dotIdx + 1);
-            artifactName = artifactName.substring(0, dotIdx);
-
-        }
-
-        List<BinaryArtifact> artifacts = new ArrayList<>();
-        BinaryArtifact oldLastArtifact = currentStage.getLastArtifact();
-        if(oldLastArtifact != null){
-            Long lastArtifactTimestamp = oldLastArtifact != null ? oldLastArtifact.getTimestamp() : null;
-            artifacts.addAll(Lists.newArrayList(binaryArtifactRepository.findByArtifactNameAndArtifactExtensionAndTimestampGreaterThan(artifactName, artifactExtension, lastArtifactTimestamp)));
-            
-            // Backwards compatibility
-            if (artifactExtension != null) {
-	        	// In the past the extension was saved as part of the artifact name
-	            artifacts.addAll(Lists.newArrayList(binaryArtifactRepository.findByArtifactNameAndArtifactExtensionAndTimestampGreaterThan(environmentComponent.getComponentName(), null, lastArtifactTimestamp)));
-            }
-        }
-        else {
-        	Map<String, Object> attributes = new HashMap<>();
-        	attributes.put(BinaryArtifactRepository.ARTIFACT_NAME, artifactName);
-        	attributes.put(BinaryArtifactRepository.ARTIFACT_EXTENSION, artifactExtension);
-        	
-        	artifacts.addAll(Lists.newArrayList(binaryArtifactRepository.findByAttributes(attributes)));
-        	
-        	// Backwards compatibility
-        	if (artifactExtension != null) {
-	        	// In the past the extension was saved as part of the artifact name
-	        	attributes.clear();
-	        	attributes.put(BinaryArtifactRepository.ARTIFACT_NAME, environmentComponent.getComponentName());
-	        	attributes.put(BinaryArtifactRepository.ARTIFACT_EXTENSION, null);
-	        	artifacts.addAll(Lists.newArrayList(binaryArtifactRepository.findByAttributes(attributes)));
-        	}
-        }
-
-        /**
-         * Sort the artifacts by timestamp and iterate through each artifact, getting their changesets and adding them to the bucket
-         */
-        List<BinaryArtifact> sortedArtifacts = Lists.newArrayList(artifacts);
-        Collections.sort(sortedArtifacts, BinaryArtifact.TIMESTAMP_COMPARATOR);
-
-        for(BinaryArtifact artifact : sortedArtifacts){
-        	if (LOGGER.isDebugEnabled()) {
-        		LOGGER.debug("Processing artifact " + artifact.getArtifactGroupId() + ":" + artifact.getArtifactName() + ":" + artifact.getArtifactVersion());
-        	}
-        	
-        	Build build = artifact.getBuildInfo();
-        	
-        	if (build == null) {
-        		// Attempt to get the build based on the artifact metadata information if possible
-        		build = getBuildByMetadata(artifact);
-        	}
-        	
+		try{
+		PrintWriter writer = new PrintWriter("/home/ubuntu/loga.txt", "UTF-8");
+		writer.println("EnvironmentComponentEventListener.addCommitsToEnvironmentStage()");
+    	String niceEnvironmentName = getNiceEnvironmentName(environmentComponent.getEnvironmentName());
+		getOrCreateEnvironmentStage(pipeline, niceEnvironmentName);
+        String pseudoEnvName = niceEnvironmentName;
+        Build build = environmentComponent.getBuildInfo();
+        writer.println(pseudoEnvName);
         	if (build != null) {
+        		writer.println("build got");
 				for (SCM scm : build.getSourceChangeSet()) {
+					writer.println("change set");
 					PipelineCommit commit = new PipelineCommit(scm, environmentComponent.getAsOfDate());
-					pipeline.addCommit(environmentComponent.getEnvironmentName(), commit);
+					pipeline.addCommit(niceEnvironmentName, commit);
 				}
         	}
+        	writer.println("build updated");
         	boolean hasFailedBuilds = !pipeline.getFailedBuilds().isEmpty();
             processPreviousFailedBuilds(build, pipeline);
             /**
@@ -178,17 +195,23 @@ public class EnvironmentComponentEventListener extends HygieiaMongoEventListener
             if (hasFailedBuilds) {
                 buildRepository.save(build);
             }
-        }
-        /**
-         * Update last artifact on the pipeline
-         */
-        if(sortedArtifacts != null && !sortedArtifacts.isEmpty()){
-            BinaryArtifact lastArtifact = sortedArtifacts.get(sortedArtifacts.size() - 1);
-            currentStage.setLastArtifact(lastArtifact);
-        }
+            writer.close();
+		}catch(Exception e){
+			LOGGER.info(e.getMessage());
+		}
+
     }
 
-    /**
+    private String getNiceEnvironmentName(String environmentName) {
+		for (String string : envNames) {
+			if(environmentName.startsWith(string)){
+				return string;
+			}
+		}
+		return "Dummy";
+	}
+
+	/**
      * Iterate over failed builds, if the failed build collector item id matches the successful builds collector item id
      * take all the commits from the changeset of the failed build and add them to the pipeline and also to the changeset
      * of the successful build.  Then remove the failed build from the collection after it has been processed.
@@ -246,56 +269,7 @@ public class EnvironmentComponentEventListener extends HygieiaMongoEventListener
         }
     }
 
-    /**
-     * Attempts to find the build for the artifact based on the artifacts build metadata information.
-     * 
-     * @param artifact
-     * @return
-     */
-    private Build getBuildByMetadata(BinaryArtifact artifact) {
-    	Build build = null;
-    	
-    	// Note: in order to work properly both the artifact and the build must exist when this is run
-    	// This shouldn't be a problem as they would exist by the time the component is deployed so
-    	// long as the collector frequency allowed the information to be picked up
-    	String jobName = null;
-    	String buildNumber = null;
-    	String instanceUrl = null;
-    	
-    	if (artifact.getMetadata() != null) {
-    		jobName = artifact.getJobName();
-    		buildNumber = artifact.getBuildNumber();
-    		instanceUrl = artifact.getInstanceUrl();
-    	}
-    	
-    	if (jobName != null && buildNumber != null && instanceUrl != null) {
-        	List<Collector> buildCollectors = collectorRepository.findByCollectorType(CollectorType.Build);
-        	List<ObjectId> collectorIds = Lists.newArrayList(Iterables.transform(buildCollectors, new ToCollectorId()));
-        	
-        	// Just in case more build collectors are added in the future that run together...
-        	for (ObjectId buildCollectorId : collectorIds) {
-            	CollectorItem jobCollectorItem = jobRepository.findJob(buildCollectorId, instanceUrl, jobName);
-            	
-            	if (jobCollectorItem == null) {
-            		continue;
-            	}
-            	
-            	build = buildRepository.findByCollectorItemIdAndNumber(jobCollectorItem.getId(), buildNumber);
-            	
-            	if (build != null) {
-            		break;
-            	}
-        	}
-    	} else {
-    		LOGGER.debug("Artifact " + artifact.getId() + " is missing build information.");
-    	}
-    	
-    	if (build == null) {
-    		LOGGER.debug("Artifact " + artifact.getId() + " references build " + buildNumber + " in '" + instanceUrl + "' but no build with that information was found.");
-    	}
-    	
-    	return build;
-    }
+    
 
     /**
      * Finds team dashboards for a given environment componentby way of the deploy collector item
@@ -310,10 +284,5 @@ public class EnvironmentComponentEventListener extends HygieiaMongoEventListener
         return dashboards;
     }
     
-    private static class ToCollectorId implements Function<Collector, ObjectId> {
-        @Override
-        public ObjectId apply(Collector input) {
-            return input.getId();
-        }
-    }
+    
 }

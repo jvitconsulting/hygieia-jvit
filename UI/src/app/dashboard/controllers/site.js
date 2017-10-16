@@ -68,7 +68,10 @@
             }
 
             if (ctrl.dashboardType == DashboardType.TEAM) {
-                return !item.isProduct && matchesSearch;
+                return item.isTeam && matchesSearch;
+            }
+            if (ctrl.dashboardType == DashboardType.CO) {
+                return !item.isProduct && !item.isTeam && matchesSearch;
             }
 
             return matchesSearch;
@@ -132,7 +135,8 @@
                 var board = {
                     id: data[x].id,
                     name: data[x].title,
-                    isProduct: data[x].type && data[x].type.toLowerCase() === DashboardType.PRODUCT.toLowerCase()
+                    isProduct: data[x].type && data[x].type.toLowerCase() === DashboardType.PRODUCT.toLowerCase(),
+                    isTeam: data[x].type && data[x].type.toLowerCase() === DashboardType.TEAM.toLowerCase()
                 };
 
                 if(board.isProduct) {
@@ -159,7 +163,8 @@
                     id: mydata[x].id,
                     name: mydata[x].title,
                     type: mydata[x].type,
-                    isProduct: mydata[x].type && mydata[x].type.toLowerCase() === DashboardType.PRODUCT.toLowerCase()
+                    isProduct: mydata[x].type && mydata[x].type.toLowerCase() === DashboardType.PRODUCT.toLowerCase(),
+                    isTeam: mydata[x].type && mydata[x].type.toLowerCase() === DashboardType.TEAM.toLowerCase()
                 });
             }
 

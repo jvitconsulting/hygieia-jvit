@@ -8,6 +8,7 @@ import com.capitalone.dashboard.model.DataResponse;
 import com.capitalone.dashboard.request.CodeQualityCreateRequest;
 import com.capitalone.dashboard.request.CodeQualityRequest;
 import com.capitalone.dashboard.service.CodeQualityService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -48,6 +49,12 @@ public class CodeQualityController {
         request.setType(CodeQualityType.StaticAnalysis);
         return codeQualityService.search(request);
     }
+    
+    // @RequestMapping(value = "/quality/static-analysis/all", method = GET, produces = APPLICATION_JSON_VALUE)
+    // public DataResponse<Iterable<CodeQuality>> qualityStaticAnalysisAll(@Valid CodeQualityRequest request) {
+    //     request.setType(CodeQualityType.StaticAnalysis);
+    //     return ((CodeQualityServiceImpl)codeQualityService).searchAllComponents(request);
+    // }
 
     @RequestMapping(value = "/quality/static-analysis", method = POST,
             consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)

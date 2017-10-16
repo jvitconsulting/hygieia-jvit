@@ -11,13 +11,22 @@
     function deployData($http) {
         var testDetailRoute = 'test-data/deploy_detail.json';
         var deployDetailRoute = '/api/deploy/status/';
+        var deployDetailRouteAlLComp = '/api/deploy/status/allcomps';
 
         return {
-            details: details
+            details: details,
+            detailsAllComp: detailsAllComp
         };
 
         function details(componentId) {
             return $http.get(HygieiaConfig.local ? testDetailRoute : deployDetailRoute + componentId)
+                .then(function (response) {
+                    return response.data;
+                });
+        }
+
+        function detailsAllComp(componentId) {
+            return $http.get(HygieiaConfig.local ? testDetailRoute : deployDetailRouteAlLComp)
                 .then(function (response) {
                     return response.data;
                 });
